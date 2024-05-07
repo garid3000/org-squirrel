@@ -31,7 +31,10 @@ and then it can converts the tree into few (useful-ish) documents.
 
 
 * Usage:
-TBD
+- To convert ~.org~ to ~.html~ ::
+#+begin_src sh :noeval
+go run main.go -in ./test_orgs/step1/step1.org -out=./test_orgs/step1/step1_by_org_squirrel.html -type=html
+#+end_src
 
 * Development State:
 TBD
