@@ -1,0 +1,37 @@
+#+title: Org-Squirrel
+#+subtitle: Go based Org Parser using Tree-sitter to export stuffs
+#+author: Garid Zorigoo
+
+* What, Why, How:
+** What is it?
+(Humor me) What is a *squirrel* but a *gopher* that *sits* on a *tree*?
+Org-Squirrel sits on the org-mode-tree parsed by tree-sitter,
+and then it can converts the tree into few (useful-ish) documents.
+
+** What I am trying to aim (rough clarity)
+- Tool that convert org-roam directory (maybe later denote) of notes into HTML files
+  (for creating a website)
+
+** Why make it?
+1. I'm just using this as a project to learn go-language.
+2. I needed tool to convert my org-notes into a website, but:
+   - ~M-x org-publish-project~ is quite slow, when there are lots of ~org-roam~ links in file.
+     It seems like, emacs looking in the org-roam database is quite slow. (?)
+   - ~go-org~ is actually good. (I currently still use it to convert my notes to HTML),
+     - However, ~go-org~ doesn't support ~org-roam~ (which I roughly modified to able to use).
+       But creating something like it from my own (and learning) was too much exciting.
+
+** What is being used (or will be used)?
+- [[https://github.com/nvim-orgmode/tree-sitter-org][tree-sitter-org (fork for nvim)]] :: It's org-mode grammer parser for the treesitter.
+  This one itself is a fork (for their ~nvim-orgmode~ project) of [[https://github.com/milisims/tree-sitter-org][tree-sitter-org]]
+- [[https://github.com/smacker/go-tree-sitter][go-tree-sitter]] :: It's golang binding to use treesitter
+  Which I forked into my [[https://github.com/garid3000/go-tree-sitter][own]] to include previously mentioned tree-sitter-org
+- (TBD, maybe) [[https://github.com/goccy/go-graphviz][go-graphviz]] :: Maybe later in the future I might like to draw graphs
+
+
+
+* Usage:
+TBD
+
+* Development State:
+TBD
