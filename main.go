@@ -37,8 +37,7 @@ func slice_of_int_to_string(alist []int, depht int, sep string, endWithSep bool)
 	for i, element := range alist {
 		if i >= depht {
 			if i != 0 && endWithSep == false {
-				result = result[:len(result)-1]
-				// just to make sure it won't end with -
+				result = result[:len(result)-1] // just to make sure it won't end with -
 			}
 			break
 		}
@@ -58,27 +57,41 @@ func getPreChildHTML(node *sitter.Node, orgHeaderDepth int) (result string) {
 
 	switch node.Type() {
 	case "headline":
-		result = fmt.Sprintf(
-			"\n<h%d id=\"%s\">",
-			orgHeaderDepth-1+org_html_toplevel_hlevel,
-			slice_of_int_to_hash_string(orgHeaderId, orgHeaderDepth),
-		)
+		if orgHeaderDepth <= 3 { // check this 3 later, probably related with org_html_toplevel_hlevel
+			result = fmt.Sprintf(
+				"\n<h%d id=\"%s\">",
+				orgHeaderDepth-1+org_html_toplevel_hlevel,
+				slice_of_int_to_hash_string(orgHeaderId, orgHeaderDepth),
+			)
+		} else {
+			result = fmt.Sprintf(
+				//"\n<h%d id=\"%s\">",
+				"<a id=\"%s\"></a>", //asdflkjasdf (4 star)<br />
+				// orgHeaderDepth-1+org_html_toplevel_hlevel,
+				slice_of_int_to_hash_string(orgHeaderId, orgHeaderDepth),
+			)
+		}
 	case "section":
-		result = fmt.Sprintf(
-			"\n<div id=\"outline-container-%s\" class=\"outline-%d\">",
-			slice_of_int_to_hash_string(orgHeaderId, orgHeaderDepth),
-			orgHeaderDepth-1+org_html_toplevel_hlevel,
-		)
+		if orgHeaderDepth <= 3 {
+			result = fmt.Sprintf(
+				"\n\n<div id=\"outline-container-%s\" class=\"outline-%d\">",
+				slice_of_int_to_hash_string(orgHeaderId, orgHeaderDepth),
+				orgHeaderDepth-1+org_html_toplevel_hlevel,
+			)
+		} else {
+			result = "\n<li>"
+		}
 
-	case "stars":
-		result = fmt.Sprintf(
-			"<span class=\"section-number-%d\">%s",
-			orgHeaderDepth-1+org_html_toplevel_hlevel,
-			slice_of_int_to_string(orgHeaderId, orgHeaderDepth, ".", true),
-		)
-
+	case "stars": // probably child of header
+		if orgHeaderDepth <= 3 { // check this 3 later, probably related with org_html_toplevel_hlevel
+			result = fmt.Sprintf(
+				"<span class=\"section-number-%d\">%s",
+				orgHeaderDepth-1+org_html_toplevel_hlevel,
+				slice_of_int_to_string(orgHeaderId, orgHeaderDepth, ".", true),
+			)
+		}
 	case "item":
-		result = " " +  node.Content(fileString) // TODO
+		result = " " + node.Content(fileString) // TODO
 
 	case "body":
 		// apparently org does it when there is body of text without any headers at the begining
@@ -93,7 +106,22 @@ func getPreChildHTML(node *sitter.Node, orgHeaderDepth int) (result string) {
 		}
 
 	case "paragraph":
+		// if node.Parent().Type() == "list/listitem" then none?
 		result = fmt.Sprintf("\n<p>\n%s", node.Content(fileString))
+
+	case "list":
+		// need to ordered or unordered list
+
+		//if node.ChildByFieldName("listitem").ChildByFieldName("bullet").Content(fileString) == "1." {
+		if node.Child(0).Child(0).Content(fileString) == "1." {
+			result = "\n<ol class=\"org-ol\">"
+		} else {
+			result = "\n<ul class=\"org-ul\">"
+		}
+
+	case "listitem":
+		// need to ordered or unordered list
+		result = "\n<li>"
 
 	default:
 	}
@@ -103,9 +131,17 @@ func getPreChildHTML(node *sitter.Node, orgHeaderDepth int) (result string) {
 func getPostChildHTML(node *sitter.Node, orgHeaderDepth int) (result string) {
 	switch node.Type() {
 	case "headline":
-		result = fmt.Sprintf("</h%d>", orgHeaderDepth-1+org_html_toplevel_hlevel)
+		if orgHeaderDepth <= 3 {
+			result = fmt.Sprintf("</h%d>", orgHeaderDepth-1+org_html_toplevel_hlevel)
+		} else {
+			result = "<br />"
+		}
 	case "section":
-		result = "\n</div>"
+		if orgHeaderDepth <= 3 {
+			result = "\n</div>"
+		} else {
+			result = "\n</li>" //\n</ol>
+		}
 	case "body":
 		if orgHeaderDepth-1+org_html_toplevel_hlevel == 1 {
 			result = ""
@@ -115,10 +151,36 @@ func getPostChildHTML(node *sitter.Node, orgHeaderDepth int) (result string) {
 	case "item":
 		result = ""
 	case "stars":
-		result = "</span>"
+		if orgHeaderDepth <= 3 { // check this 3 later, probably related with org_html_toplevel_hlevel
+			result = "</span>"
+		}
 	case "paragraph":
 		result = "</p>"
+
+	case "list":
+		// need to ordered or unordered list
+		//fmt.Printf(node.Content(fileString))
+		if node.Child(0).Child(0).Content(fileString) == "1." {
+			result = "\n</ol>"
+		} else {
+			result = "\n</ul>"
+		}
+
+	case "listitem":
+		// need to ordered or unordered list
+		result = "\n</li>"
+
 	default:
+	}
+	return result
+}
+
+// returns the count of child with specific type.
+func CountChildByType(node *sitter.Node, childType string) (result int) {
+	for i := 0; i < int(node.ChildCount()); i++ {
+		if node.Child(i).Type() == childType{
+			result++
+		}
 	}
 	return result
 }
@@ -137,7 +199,15 @@ func SquirrelJumpToTreeNodeForHTML(node *sitter.Node, treeDepth int, orgHeaderDe
 			orgHeaderId[orgHeaderDepth+1] = 0 //
 			// headline, body, section
 			// next_depth+ // depth changes only when readling child of section?
+			// i needed something just before/after all-child-sections after depht of 3
+			if orgHeaderId[orgHeaderDepth] == 1 && orgHeaderDepth > 3-1  { // when it's first child-section && CountChildByType(node, "section") != 1
+				outputfile.WriteString("\n\n<ol class=\"org-ol\">")
+			}
 			SquirrelJumpToTreeNodeForHTML(child_node, treeDepth+1, orgHeaderDepth+1, outputfile)
+
+			if i == int(node.ChildCount())-1 && orgHeaderDepth > 3 -1 { // when it's last child section (TODO) && CountChildByType(node, "section") != 1
+				outputfile.WriteString("\n\n</ol>")
+			}
 		} else {
 			SquirrelJumpToTreeNodeForHTML(child_node, treeDepth+1, orgHeaderDepth, outputfile)
 		}
@@ -154,7 +224,7 @@ func PreSquirrelJumpToTreeNodeForHTML(outputfile *os.File, now time.Time) {
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-` + fmt.Sprintf("<!-- %d-%02d-%02d Tue %02d:%02d -->", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()) +
+` + fmt.Sprintf("<!-- %d-%02d-%02d xxx %02d:%02d -->", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()) +
 			`
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -372,7 +442,7 @@ func PostSquirrelJumpToTreeNodeForHTML(outputfile *os.File, now time.Time) {
 		`
 </div>
 <div id="postamble" class="status">
-` + fmt.Sprintf("<p class=\"date\">Created: %d-%02d-%02d Tue %02d:%02d</p>", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()) + `
+` + fmt.Sprintf("<p class=\"date\">Created: %d-%02d-%02d XXX %02d:%02d</p>", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()) + `
 <p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
